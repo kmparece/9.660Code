@@ -1,0 +1,213 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww19600\viewh14980\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 // Approach #2\
+\
+var offended_given_help = function(did_helper_help) \{\
+  var makeModel = function(f)\{return function()\{\
+    // helper think they're more_comp than helpee?\
+    //set more comp to 0.5 and flip\
+    var more_comp = mem(function(pair) \{\
+      flip(0.5)\
+    \})\
+    // based on if helper thinks they are more_comp, will they help?\
+    var help = mem(function(pair) \{\
+      var more_comp_pair = more_comp(pair)\
+      return (more_comp_pair ? flip(0.85) : flip(0.15))\
+      //return more_comp_pair                         \
+    \})\
+\
+    f(help, more_comp)\
+  \}\}\
+\
+\
+  // inference about whether helper thinks they're more_comp\
+  var dist = Infer(\{method:'enumerate'\}, makeModel(function(help, more_comp) \{\
+    condition(help('pair1') == did_helper_help)\
+    return more_comp('pair1')\
+  \}))\
+\
+viz(dist, \{xLabel: 'More Competent', yLabel: 'P(More Competent | Help)'\})\
+  \
+  // based on helper\'92s beliefs about if they're more comp, will helpee be offended?\
+ var makeModel2 = function(f)\{return function()\{  \
+   var offense = function(more_comp_dist)\{\
+     var p_more_comp = Math.exp(dist.score(true))\
+     var p_not_more_comp = Math.exp(dist.score(false))\
+     \
+     var more_comp_binary = function(p_more_comp)\{\
+       if (p_more_comp > 50)\{\
+         return true\
+       \}\
+       else \{\
+         return false\
+       \}\
+     \}\
+     \
+     var common_ground = flip(0.5)\
+     \
+     var offensive = function(common_ground, more_comp_binary)\{\
+       if (common_ground == true)\{\
+          if (more_comp_binary == true)\{\
+            return flip (0.2)\
+          \} else \{\
+            return flip(0.1)\
+       \}\
+       \}\
+       else \{\
+         if(more_comp_binary == false)\{\
+           return flip(0.85)\
+         \} else \{\
+           return flip(0.65)\
+         \}\
+       \}       \
+     \}\
+    \
+       return offensive(false, true)\
+    \
+//     return p_not_more_comp/(p_more_comp + p_not_more_comp)\
+   \}\
+   \
+       f(offense)\
+  \}\}\
+  \
+  var dist2 = Infer(\{method:'enumerate'\}, makeModel2(function(offense) \{\
+    return offense()\
+  \}))\
+\
+viz(dist2, \{xLabel: 'Offense', yLabel: 'P(Offense | Common Ground = F, More Comp = T)'\})\
+  \
+   return offense(dist)    \
+ \}\
+\
+\
+var did_helper_help = false\
+var offended = offended_given_help(did_helper_help)\
+print(offended)\
+\
+// Approach #1\
+\
+var prob_comp_true_given_evidence =\{ \
+    low_ambig: 0.8, // 0.8\
+    mid_ambig: 0.74, // 0.45\
+    high_ambig: 0.51 // 0.15\
+\}\
+\
+var prob_comp_false_given_evidence =\{ \
+    low_ambig: 0.2, \
+    mid_ambig: 0.26, \
+    high_ambig: 0.49 \
+\}\
+\
+var prob_offense_true_given_comp_help = \{\
+    low_ambig: 0.16, \
+    mid_ambig: 0.2, \
+    high_ambig: 0.45 \
+\}\
+\
+var prob_offense_false_given_comp_help = \{ \
+    low_ambig: 0.84, \
+    mid_ambig: 0.8, \
+    high_ambig: 0.55 \
+\}\
+\
+var prob_help_true_given_comp = \{ \
+    low_ambig: 0.9,\
+    mid_ambig: 0.5, \
+    high_ambig: 0.2 \
+\}\
+\
+var prob_help_false_given_comp = \{ \
+    low_ambig: 0.1, \
+    mid_ambig: 0.5, \
+    high_ambig: 0.8\
+\}\
+\
+var levels = ['low_ambig', 'mid_ambig', 'high_ambig']\
+\
+var p_offense = function(C, H, O_given_C_H, level) \{\
+   if (C == true) \{\
+     if (H == true) \{\
+        if (O_given_C_H == true) \{\
+       return prob_comp_true_given_evidence[level] * prob_help_true_given_comp[level] * prob_offense_true_given_comp_help[level] \
+     \}\
+   \}\
+   \}\
+     if (C == true)\{\
+        if (H == false)\{\
+          if (O_given_C_H == true) \{\
+       return prob_comp_true_given_evidence[level] * prob_help_false_given_comp[level] * prob_offense_true_given_comp_help[level] \
+        \}\
+    \}\
+     \}\
+     if (C == false) \{\
+       if (H == true) \{\
+         if (O_given_C_H == true) \{\
+       return prob_comp_false_given_evidence[level] * prob_help_true_given_comp[level] * prob_offense_true_given_comp_help[level]  \
+     \}\
+     \}\
+     \}\
+     if (C == false)\{\
+        if (H == false) \{\
+           if (O_given_C_H == true) \{\
+       return prob_comp_false_given_evidence[level] * prob_help_false_given_comp[level] * prob_offense_true_given_comp_help[level]\
+   \}\
+ \}\
+     \}\
+  if (C == true) \{\
+     if (H == true) \{\
+        if (O_given_C_H == false) \{\
+       return prob_comp_true_given_evidence[level] * prob_help_true_given_comp[level] * prob_offense_false_given_comp_help[level] \
+     \}\
+   \}\
+   \}\
+     if (C == true)\{\
+        if (H == false)\{\
+          if (O_given_C_H == false) \{\
+       return prob_comp_true_given_evidence[level] * prob_help_false_given_comp[level] * prob_offense_false_given_comp_help[level]  \
+        \}\
+    \}\
+     \}\
+     if (C == false) \{\
+       if (H == true) \{\
+         if (O_given_C_H == false) \{\
+       return prob_comp_false_given_evidence[level] * prob_help_true_given_comp[level] * prob_offense_false_given_comp_help[level] \
+     \}\
+     \}\
+     \}\
+     if (C == false)\{\
+        if (H == false) \{\
+           if (O_given_C_H == false) \{\
+       return prob_comp_false_given_evidence[level] * prob_help_false_given_comp[level] * prob_offense_false_given_comp_help[level] \
+   \}\
+ \}\
+     \}\
+\}\
+ \
+p_offense(true, true, true, 'low_ambig')\
+\
+var low = p_offense(true, true, true, 'low_ambig') + p_offense(true, false, true, 'low_ambig') + p_offense(false, true, true, 'low_ambig') + p_offense(false, false, true, 'low_ambig')\
+var mid = p_offense(true, true, true, 'mid_ambig') + p_offense(true, false, true, 'mid_ambig') + p_offense(false, true, true, 'mid_ambig') + p_offense(false, false, true, 'mid_ambig')\
+var high = p_offense(true, true, true, 'high_ambig') + p_offense(true, false, true, 'high_ambig') + p_offense(false, true, true, 'high_ambig') + p_offense(false, false, true, 'high_ambig')\
+\
+\
+print(low)\
+print(mid)\
+print(high)\
+\
+//  for (let C of vals) \{\
+     //for (let H of vals) \{\
+//          p_offense_marginal += p_offense(C, H, 'low_ambig') * 1/2 * 1/2\
+    //   print(C)\
+//      \}\
+ //\}\
+\
+var labels = ['low', 'mid', 'high'];\
+var computed_data = [low,mid,high]\
+\
+viz.bar(labels, computed_data, \{xLabel: 'Ambiguity Level', yLabel: 'P(Offense)'\})\
+}
